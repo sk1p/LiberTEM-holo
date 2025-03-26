@@ -25,7 +25,8 @@ dependencies = [
     "scipy",
     "sparse",
     "sparseconverter",
-    'scikit-image',
+    "scikit-image",
+    "empyre",
 ]
 keywords = ["electron microscopy", "holography", "off-axis holography"]
 classifiers = [

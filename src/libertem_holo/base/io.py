@@ -1,28 +1,31 @@
-"""
-Basic I/O for holography data.
+"""Basic I/O for holography data.
 
 We mostly want to support loading holograms from DM{3,4} files, and save
 results as numpy .npz files
 """
 
-import numpy as np
 import json
+import pathlib
 from typing import Any, NamedTuple
+
+import numpy as np
 from ncempy.io.dm import fileDM
 
 
 def save_results(
-    filename: str,
+    filename: str | pathlib.Path,
     complex_wave: np.ndarray,
     unwrapped_phase: np.ndarray | None = None,
     brightfield: np.ndarray | None = None,
-    metadata: dict[str, Any] = None,
-):
-    """
-    Save a typical reconstruction result.
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Save a typical reconstruction result.
 
     Parameters
     ----------
+    filename
+        filename or full path to save as (should end in .npz)
+
     complex_wave
         2D numpy array (dtype complex64 or complex128)
 
@@ -36,24 +39,24 @@ def save_results(
     metadata
         Dictionary of custom metadata. The values have to be json-serializable
         (roughly numbers, strings, lists or dicts of these)
+
     """
     if metadata is None:
         metadata = {}
     arrays = {
-        'complex_wave': complex_wave,
-        'metadata': json.dumps(metadata),
+        "complex_wave": complex_wave,
+        "metadata": json.dumps(metadata),
     }
     if unwrapped_phase is not None:
-        arrays['unwrapped_phase'] = unwrapped_phase
+        arrays["unwrapped_phase"] = unwrapped_phase
     if brightfield is not None:
-        arrays['brightfield'] = brightfield
+        arrays["brightfield"] = brightfield
     np.savez(filename, **arrays, allow_pickle=False)
 
 
 class InputData(NamedTuple):
-    """
-    2D or 3D input data (holograms)
-    """
+    """2D or 3D input data (holograms)."""
+
     data: np.ndarray
 
     # in nm
@@ -66,18 +69,26 @@ class InputData(NamedTuple):
     exposure_time: float | None
 
     @classmethod
-    def load_from_dm(cls, filename) -> "InputData":
+    def load_from_dm(cls, filename: str | pathlib.Path) -> "InputData":
+        """Load `InputData` from the given filename.
+
+        Parameters
+        ----------
+        filename
+            filename or full path to a .dm3 or .dm4 file
+
+        """
         dm = fileDM(filename)
         ds = dm.getDataset(0)
-        assert ds['pixelUnit'] == 'nm'
-        assert ds['pixelSize'][0] == ds['pixelSize'][1]
-        pixelsize = ds['pixelSize'][0]
-        assert len(ds['data'].shape) in (2, 3), "data should be 2D or 3D"
-        exposure_time = dm.getMetadata(0)['DataBar Exposure Time (s)']
-        if len(ds['data'].shape) == 3:
-            exposure_time *= ds['data'].shape[0]
+        assert ds["pixelUnit"] == "nm"
+        assert ds["pixelSize"][0] == ds["pixelSize"][1]
+        pixelsize = ds["pixelSize"][0]
+        assert len(ds["data"].shape) in (2, 3), "data should be 2D or 3D"
+        exposure_time = dm.getMetadata(0)["DataBar Exposure Time (s)"]
+        if len(ds["data"].shape) == 3:
+            exposure_time *= ds["data"].shape[0]
         return cls(
-            data=ds['data'],
+            data=ds["data"],
             pixelsize=pixelsize,
             tags=dm.getMetadata(0),
             exposure_time=exposure_time,
